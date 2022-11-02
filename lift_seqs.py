@@ -29,6 +29,34 @@ def get_closest_value(arr, val):
     '''
     return arr[min(range(len(arr)), key = lambda i: abs(arr[i]-val))]
 
+def get_end_of_hp(seq, idx):
+    char = seq[idx]
+    i = idx
+    while seq[i] == char:
+        i += 1
+    return i - 1
+
+def get_start_of_hp(seq, idx):
+    char = seq[idx]
+    i = idx
+    while seq[i] == char:
+        i -= 1
+    return i + 1
+
+def hps_between(seq, idx1, idx2):
+    start = get_end_of_hp(seq, min(idx1, idx2))
+    end = get_start_of_hp(seq, max(idx1, idx2))
+    curr_char = seq[start]
+    hps = 0
+    for i in range(start, end):
+        if seq[i] != curr_char:
+            hps += 1
+        curr_char = seq[i]
+    return hps
+
+def same_hp(seq, idx1, idx2):
+    return seq[idx1] == seq[idx2] and hps_between(seq, idx1, idx2) == 0
+
 def lift_c_to_u_from_smaller_idx(compressed_coord, curr_compressed_coord, map, rle, is_end):
     '''A helper function for lifting a coordinate from compressed to uncompressed space in the case when the nearest map key pertains to a smaller compressed index than the one being lifted
 
@@ -131,17 +159,17 @@ def lift_u_to_c_from_smaller_idx(uncompressed_coord, curr_uncompressed_coord, un
         curr_compressed_coord (int): The corresponding coordinate in compressed space
     '''
     curr_compressed_coord = map[curr_uncompressed_coord]
-    if uncompressed_seq[uncompressed_coord] == uncompressed_seq[curr_uncompressed_coord]:
+    in_same_hp = same_hp(uncompressed_seq, uncompressed_coord, curr_uncompressed_coord)
+    if in_same_hp:
         if is_end:
             return curr_compressed_coord + 1
         else:
             return curr_compressed_coord
-    while curr_uncompressed_coord < uncompressed_coord:
-        curr_uncompressed_coord += rle[curr_compressed_coord]
-        curr_compressed_coord += 1
-    if curr_uncompressed_coord > uncompressed_coord and rle[curr_compressed_coord] > 1 and uncompressed_seq[curr_uncompressed_coord] != uncompressed_seq[uncompressed_coord]:
-        curr_compressed_coord -= 1
-    if is_end:
+    else:
+        hps = hps_between(uncompressed_seq, uncompressed_coord, curr_uncompressed_coord) + 1
+        curr_compressed_coord += hps
+    
+    if is_end and not same_hp(uncompressed_seq, uncompressed_coord, curr_uncompressed_coord):
         return curr_compressed_coord + 1
     else:
         return curr_compressed_coord
@@ -161,17 +189,17 @@ def lift_u_to_c_from_larger_idx(uncompressed_coord, curr_uncompressed_coord, unc
         curr_compressed_coord (int): The corresponding coordinate in compressed space
     '''
     curr_compressed_coord = map[curr_uncompressed_coord]
-    if uncompressed_seq[uncompressed_coord] == uncompressed_seq[curr_uncompressed_coord]:
+    in_same_hp = same_hp(uncompressed_seq, uncompressed_coord, curr_uncompressed_coord)
+    if in_same_hp:
         if is_end:
             return curr_compressed_coord + 1
         else:
             return curr_compressed_coord
-    while curr_uncompressed_coord > uncompressed_coord:
-        curr_uncompressed_coord -= rle[curr_compressed_coord]
-        curr_compressed_coord -= 1
-    if curr_uncompressed_coord < uncompressed_coord and rle[curr_compressed_coord] > 1 and uncompressed_seq[curr_uncompressed_coord] != uncompressed_seq[uncompressed_coord]:
-        curr_compressed_coord += 1
-    if is_end:
+    else:
+        hps = hps_between(uncompressed_seq, uncompressed_coord, curr_uncompressed_coord) + 1
+        curr_compressed_coord -= hps
+
+    if is_end and not same_hp(uncompressed_seq, uncompressed_coord, curr_uncompressed_coord):
         return curr_compressed_coord + 1
     else:
         return curr_compressed_coord
@@ -229,7 +257,7 @@ def lift_seqs(uncompressed_ref_fasta_file, seqs_bed_file, map_file, lift_compres
     out_bed = open(out_bed_file, 'w')
     for line in in_bed:
         line = line.strip()
-        line_split = line.split('\t', line)
+        line_split = line.split('\t')
         id = line_split[0]
         fasta = ref_fasta_seqs[id]
         if lift_compressed_to_uncompressed:
@@ -240,11 +268,13 @@ def lift_seqs(uncompressed_ref_fasta_file, seqs_bed_file, map_file, lift_compres
     out_bed.close()
 
 parser = argparse.ArgumentParser()
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('-cu', '--compressed_to_uncompressed', help='Take compressed coordinates and lift them to compressed space', action='store_true')
+group.add_argument('-uc', '--uncompressed_to_compressed', help='Take uncompressed coordinates and lift them to uncompressed space', action='store_true')
 parser.add_argument('uncompressed_ref_fasta_file', type=str, help='Path to the file containing the uncompressed reference')
-parser.add_argument('seqs_bed_file', type=str, help='Path to the bed file containing the coordinates to be lifted over')
 parser.add_argument('map_file', type=str, help='Path to the file containing the map between compressed and uncompressed space')
-parser.add_argument('life_compressed_to_uncompressed', type=int, help='1 to lift from compressed to uncompressed space, 0 to lift from uncompressed to compressed space')
+parser.add_argument('in_bed_file', type=str, help='Path to the bed file containing the coordinates to be lifted over')
 parser.add_argument('out_bed_file', type=str, help='Path to the file where the program generated bed file containing the new lifted coordinates will be written')
 args = parser.parse_args()
 
-lift_seqs(uncompressed_ref_fasta_file=args.uncompressed_ref_fasta_file, seqs_bed_file=args.seqs_bed_file, map_file=args.map_file, lift_compressed_to_uncompressed=args.lift_compressed_to_uncompressed, out_bed_file=args.out_bed_file)
+lift_seqs(uncompressed_ref_fasta_file=args.uncompressed_ref_fasta_file, seqs_bed_file=args.in_bed_file, map_file=args.map_file, lift_compressed_to_uncompressed=args.compressed_to_uncompressed, out_bed_file=args.out_bed_file)

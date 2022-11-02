@@ -156,15 +156,17 @@ def uncompress_writefasta(in_fasta_file, out_fasta_file, map_file) :
     write_uncompressed_fasta(in_fasta_file, out_fasta_file, map)
 
 parser = argparse.ArgumentParser()
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('-c', '--compress', help='Take uncompressed reference and compress it', action='store_true')
+group.add_argument('-u', '--uncompress', help='Take compressed reference and uncompress it', action='store_true')
 parser.add_argument('in_fasta_file', type=str, help='Path to the input fasta file')
 parser.add_argument('out_fasta_file', type=str, help='Path to the file where the program generated fasta will be written')
 parser.add_argument('map_file', type=str, help='Path to the file where the program generated map converting between compressed and uncompressed space will be written')
-parser.add_argument('compress_or_uncompress', type=int, help='1 to compress, 0 to uncompress')
 parser.add_argument('-d', '--density', nargs='?', type=int, default=1000, help='Density of generated maps, tradeoff between space and eventual lookup time for lifting')
 
 args = parser.parse_args()
 
-if args.compress_or_uncompress:
+if args.compress:
     compress_writefasta_savemap(in_fasta_file=args.in_fasta_file, out_fasta_file=args.out_fasta_file, map_file=args.map_file, density=args.density)
 else:
     uncompress_writefasta(in_fasta_file=args.in_fasta_file, out_fasta_file=args.out_fasta_file, map_file=args.map_file)
