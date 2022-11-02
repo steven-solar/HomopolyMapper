@@ -2,6 +2,7 @@
 
 ## Requirements:
 python >= 2.7.15
+
 Python libraries: argparse, Bio, json
 
 ## Example Use
