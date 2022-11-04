@@ -138,8 +138,9 @@ def lift_c_to_u(compressed_start, compressed_end, id, map_file):
     rle = map[id]['rle']
     uncompression_map = map[id]['uncompression_map']
     d = {int(k):int(v) for k,v in uncompression_map.items()}
-    curr_start = get_closest_value(d.keys(), compressed_start)
-    curr_end = get_closest_value(d.keys(), compressed_end-1)
+    keys = list(d.keys())
+    curr_start = get_closest_value(keys, compressed_start)
+    curr_end = get_closest_value(keys, compressed_end-1)
     uncompressed_start = lift_c_to_u_helper(compressed_start, curr_start, d, rle, False)
     uncompressed_end = lift_c_to_u_helper(compressed_end-1, curr_end, d, rle, True)
     return uncompressed_start, uncompressed_end
