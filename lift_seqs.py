@@ -29,6 +29,45 @@ def get_closest_value(arr, val):
     '''
     return arr[min(range(len(arr)), key = lambda i: abs(arr[i]-val))]
 
+def get_closest_value_sorted(arr, val):
+    '''Get closest value to val in a sorted list
+
+    Args:
+        arr (list): The list containing all values to check
+        val (int): The value of interest
+    
+    Returns:
+        (int): The element of arr closest to val
+    '''
+    n = len(arr)
+    if (val <= arr[0]):
+        return arr[0]
+    if (val >= arr[n - 1]):
+        return arr[n - 1]
+
+    left = 0
+    right = n
+    mid = 0
+    while (left < right):
+        mid = (left + right) // 2
+        if (arr[mid] == val):
+            return arr[mid]
+        if (val < arr[mid]) :
+            if (mid > 0 and val > arr[mid - 1]):
+                return pick_closer_of_two(arr[mid - 1], arr[mid], val)
+            right = mid
+        else :
+            if (mid < n - 1 and val < arr[mid + 1]):
+                return pick_closer_of_two(arr[mid], arr[mid + 1], val) 
+            left = mid + 1
+    return arr[mid]
+ 
+def pick_closer_of_two(a, b, val):
+    if abs(a - val) <= abs(b - val):
+        return a
+    else:
+        return b
+
 def get_end_of_hp(seq, idx):
     char = seq[idx]
     i = idx
@@ -139,8 +178,9 @@ def lift_c_to_u(compressed_start, compressed_end, id, map_file):
     uncompression_map = map[id]['uncompression_map']
     d = {int(k):int(v) for k,v in uncompression_map.items()}
     keys = list(d.keys())
-    curr_start = get_closest_value(keys, compressed_start)
-    curr_end = get_closest_value(keys, compressed_end-1)
+    keys.sort()
+    curr_start = get_closest_value_sorted(keys, compressed_start)
+    curr_end = get_closest_value_sorted(keys, compressed_end-1)
     uncompressed_start = lift_c_to_u_helper(compressed_start, curr_start, d, rle, False)
     uncompressed_end = lift_c_to_u_helper(compressed_end-1, curr_end, d, rle, True)
     return uncompressed_start, uncompressed_end
@@ -246,8 +286,10 @@ def lift_u_to_c(uncompressed_start, uncompressed_end, uncompressed_seq, id, map_
     rle = map[id]['rle']
     compression_map = map[id]['compression_map']
     d = {int(k):int(v) for k,v in compression_map.items()}
-    curr_start = get_closest_value(d.keys(), uncompressed_start)
-    curr_end = get_closest_value(d.keys(), uncompressed_end-1)
+    keys = list(d.keys())
+    keys.sort()
+    curr_start = get_closest_value(keys, uncompressed_start)
+    curr_end = get_closest_value(keys, uncompressed_end-1)
     compressed_start = lift_u_to_c_helper(uncompressed_start, curr_start, uncompressed_seq, d, rle, False)
     compressed_end = lift_u_to_c_helper(uncompressed_end-1, curr_end, uncompressed_seq, d, rle, True)
     return compressed_start, compressed_end
